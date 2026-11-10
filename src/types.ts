@@ -14,8 +14,11 @@ export type BrowserOptions = {
   labelField?: string
   /** What counts as a leaf (for a taxonomy: `{ field: 'rank', equals: 'species' }`). */
   leaf: { field: string; equals: unknown }
-  /** Leaves and nodes hidden by default, behind a switch (for a taxonomy: fossils). */
-  hideByDefault?: { field: string; equals: unknown; label?: string }
+  /**
+   * Leaves and nodes hidden by default, behind a switch (for a taxonomy: fossils). Either `equals` (hide what
+   * has this value) or `notEquals` (show only what has this value, for example only confirmed living species).
+   */
+  hideByDefault?: { field: string; equals?: unknown; notEquals?: unknown; label?: string }
   /** Equality filters every query applies (for example `{ _status: 'published' }`). */
   filter?: Record<string, unknown>
   /** Name, everyday name and image from a raw document. */

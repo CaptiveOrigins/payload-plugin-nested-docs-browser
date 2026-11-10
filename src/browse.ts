@@ -36,8 +36,19 @@ const describe = (o: BrowserOptions, doc: Lean): Described => {
   return { name: d.name ?? String(doc[o.labelField ?? 'name'] ?? ''), everyday: d.everyday ?? null, image: d.image ?? null }
 }
 
-const hiddenMatch = (o: BrowserOptions) => (o.hideByDefault ? { [o.hideByDefault.field]: o.hideByDefault.equals } : null)
-const isHidden = (o: BrowserOptions, doc: Lean) => Boolean(o.hideByDefault && doc[o.hideByDefault.field] === o.hideByDefault.equals)
+const hides = (o: BrowserOptions) => Boolean(o.hideByDefault && ('notEquals' in o.hideByDefault || 'equals' in o.hideByDefault))
+/** Is a document hidden by default? With `notEquals`, anything without the value (missing included) is hidden. */
+const isHidden = (o: BrowserOptions, doc: Lean) => {
+  const h = o.hideByDefault
+  if (!h) return false
+  return 'notEquals' in h ? doc[h.field] !== h.notEquals : doc[h.field] === h.equals
+}
+/** The same test inside an aggregation. */
+const hiddenExpr = (o: BrowserOptions) => {
+  const h = o.hideByDefault!
+  const field = '$' + h.field
+  return 'notEquals' in h ? { $ne: [{ $ifNull: [field, null] }, h.notEquals] } : { $eq: [field, h.equals] }
+}
 const isLeaf = (o: BrowserOptions, doc: Lean) => doc[o.leaf.field] === o.leaf.equals
 
 /**
@@ -53,10 +64,9 @@ async function leafCounts(o: BrowserOptions, model: Model, root: string, exclude
     [pf]: root ? { $regex: `^${escape(root)}/` } : { $exists: true },
   }
   const notUnder = exclude.map((e) => ({ [pf]: { $not: new RegExp(`^${escape(e)}(/|$)`) } }))
-  const hm = hiddenMatch(o)
   const rows = await model.aggregate([
     { $match: notUnder.length ? { $and: [match, ...notUnder] } : match },
-    { $project: { child: { $arrayElemAt: [{ $split: [`$${pf}`, '/'] }, segment] }, hidden: hm ? { $eq: [`$${o.hideByDefault!.field}`, o.hideByDefault!.equals] } : { $literal: false } } },
+    { $project: { child: { $arrayElemAt: [{ $split: [`$${pf}`, '/'] }, segment] }, hidden: hides(o) ? hiddenExpr(o) : { $literal: false } } },
     { $group: { _id: { child: '$child', hidden: '$hidden' }, n: { $sum: 1 } } },
   ] as object[])
   const shown = new Map<string, number>()
@@ -90,7 +100,9 @@ async function childrenUnder(payload: Payload, o: BrowserOptions, root: string, 
         // A leaf counts itself; anything else counts the leaves under it.
         leaves: leaf ? (isHidden(o, d) ? 0 : 1) : (shown.get(key) ?? 0),
         hiddenLeaves: leaf ? (isHidden(o, d) ? 1 : 0) : (hidden.get(key) ?? 0),
-        hidden: isHidden(o, d) || (!leaf && (shown.get(key) ?? 0) === 0 && (hidden.get(key) ?? 0) > 0),
+        // A leaf follows its own flag. A branch is hidden only when it shows no leaves and is flagged itself or
+        // holds only hidden leaves; a branch with leaves to show is never hidden, whatever its own flag says.
+        hidden: leaf ? isHidden(o, d) : (shown.get(key) ?? 0) === 0 && (isHidden(o, d) || (hidden.get(key) ?? 0) > 0),
       }
     })
 }

@@ -4,7 +4,7 @@ Kept by this repo's owning session, per `~/Code/CLAUDE.md`, "Test self-audits". 
 
 ## 2026-11-10: first build
 
-21 tests: `core.test.ts` (8), `plugin.test.ts` (7, real Payload 3.92 and in-memory MongoDB), `client.test.tsx` (6, jsdom).
+22 tests: `core.test.ts` (8), `plugin.test.ts` (8, real Payload 3.92 and in-memory MongoDB), `client.test.tsx` (6, jsdom).
 
 | Promise | Test |
 | --- | --- |
@@ -19,6 +19,7 @@ Kept by this repo's owning session, per `~/Code/CLAUDE.md`, "Test self-audits". 
 | Group counts and group children without excluded branches | plugin: "everyday groups" |
 | Curator check, and its refusal without permission | plugin: "lists species in no group…", "refuses the curator check…" |
 | Endpoints answer; cache refreshes when the tree changes | plugin: "the endpoints and the cache" |
+| `notEquals`: unknown and missing hidden; branches with shown leaves never hidden | plugin: "showing only what is confirmed" |
 | Views: Show all reveals every child, the A–Z bar, the fossils switch, sections, translation | client: all six |
 
 Checked outside the tests: a real taxonomy read-only (timings), and a real browser at 1280 and 375 px with axe (clean, lists open).

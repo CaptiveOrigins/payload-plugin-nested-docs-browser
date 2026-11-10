@@ -137,6 +137,24 @@ describe('everyday groups', () => {
   })
 })
 
+describe('showing only what is confirmed (notEquals)', () => {
+  it('hides everything without the value, including unknown and missing, and counts it apart', async () => {
+    const only: BrowserOptions = { ...opts, hideByDefault: { field: 'extant', notEquals: 'living' }, cacheMs: 0 }
+    // One bearded dragon marked unknown: under "only living" it moves behind the switch, like the fossil.
+    await payload.update({ collection: 'taxa', id: ids['reptilia/squamata/agamidae/pogona/barbata']!, data: { extant: 'unknown' } as never })
+    const r = await browse(payload, only, 'reptilia/squamata')
+    const by = Object.fromEntries(r.children.map((c) => [c.name, c]))
+    expect(by.Agamidae).toMatchObject({ leaves: 1, hiddenLeaves: 1 })
+    expect(by.Mosasauridae).toMatchObject({ leaves: 0, hiddenLeaves: 1, hidden: true })
+    // Family records aren't marked living themselves, but a family with living species is never hidden.
+    expect(by.Agamidae!.hidden).toBe(false)
+    expect(by.Colubridae).toMatchObject({ leaves: 1, hidden: false })
+    // A family with no species at all is empty, not hidden, so it's still listed in its own fold.
+    expect(by.Adocidae).toMatchObject({ leaves: 0, hiddenLeaves: 0 })
+    await payload.update({ collection: 'taxa', id: ids['reptilia/squamata/agamidae/pogona/barbata']!, data: { extant: 'living' } as never })
+  })
+})
+
 describe('the endpoints and the cache', () => {
   const get = (path: string) => fetchEndpoint(path)
   async function fetchEndpoint(path: string): Promise<Response> {
