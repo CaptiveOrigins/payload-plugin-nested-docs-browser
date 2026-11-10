@@ -3,7 +3,7 @@ import type { CollectionConfig, Config, Endpoint, Plugin } from 'payload'
 import { browse, browseGroup, clearBrowseCache, groupCheck, groupsOverview } from './browse.js'
 import type { BrowserOptions } from './types.js'
 
-export { browse, browseGroup, clearBrowseCache, groupCheck, groupsOverview, type BrowseResult, type Group } from './browse.js'
+export { browse, browseCacheSize, browseGroup, CACHE_MAX, clearBrowseCache, groupCheck, groupsOverview, type BrowseResult, type Group } from './browse.js'
 export * from './core/index.js'
 export type { BrowserOptions, Described } from './types.js'
 
