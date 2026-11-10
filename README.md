@@ -61,6 +61,8 @@ Or over HTTP: `GET /api/nested-docs-browser/<collection>?path=…`, `…/groups`
 
 ## Styling
 
+**Icons and silhouettes.** For a one-color SVG icon, return `{ image, imageAlt, imageMask: true }` from `describe`. The browser draws it as a mask in `--ndb-color-image`, so it takes the theme's color in light and dark. With `imageAlt` ("No photo yet (tortoise)") it's announced; without it, it's decorative. `unstyled` shows it as a plain picture.
+
 ```tsx
 // Theme tokens for the whole site (or just --ndb-* for this browser):
 <div style={{ '--palette-primary': '#2f6b3a', '--palette-surface-raised': '#f4f1e6', '--palette-radius-lg': '0px' }}>

@@ -21,6 +21,10 @@ export type Child = {
   /** The child is itself a leaf (a species under a genus). */
   isLeaf?: boolean
   image?: string | null
+  /** Words for the image ("No photo yet (tortoise)"); without them it's decorative. */
+  imageAlt?: string | null
+  /** Draw the image as a mask in the theme's image color (one-color icons, silhouettes) instead of as a picture. */
+  imageMask?: boolean
   href?: string | null
 }
 

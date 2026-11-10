@@ -76,16 +76,34 @@ export function NestedDocsBrowserStyles({ nonce }: { nonce?: string }) {
   return <style nonce={nonce} data-ndb-styles="">{NDB_STYLES}</style>
 }
 
-type Common = { text: BrowserText; Link: LinkLike; cx: Cx; showHidden: boolean }
+type Common = { text: BrowserText; Link: LinkLike; cx: Cx; showHidden: boolean; unstyled: boolean }
+
+/**
+ * An image: a picture, or (with `mask`) a one-color icon drawn as a mask in `--ndb-color-image`, so it follows the
+ * theme and dark mode. Unstyled, a mask falls back to a plain picture. With `alt` it's announced; without, decorative.
+ */
+function NodeImage({ src, alt, mask, size, className, unstyled }: { src: string; alt?: string | null; mask?: boolean; size: number; className?: string; unstyled: boolean }) {
+  if (!mask || unstyled) return <img className={className} src={src} alt={alt ?? ''} width={size} height={size} />
+  const url = `url(${JSON.stringify(src)})`
+  const a11y = alt ? { role: 'img' as const, 'aria-label': alt } : { 'aria-hidden': true as const }
+  return (
+    <span
+      {...a11y}
+      className={className}
+      data-mask=""
+      style={{ display: 'inline-block', width: size, height: size, backgroundColor: 'var(--ndb-color-image)', maskImage: url, WebkitMaskImage: url, maskSize: 'contain', WebkitMaskSize: 'contain', maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskPosition: 'center' }}
+    />
+  )
+}
 
 /** One child as a card: image, everyday name over the system name, count and a share bar. */
-function ChildCard({ c, of, text, Link, cx, showHidden }: Common & { c: Child; of: number }) {
+function ChildCard({ c, of, text, Link, cx, showHidden, unstyled }: Common & { c: Child; of: number }) {
   const n = leavesOf(c, showHidden)
   const pct = of > 0 ? Math.max(1.5, Math.round((n / of) * 100)) : 0
   const data = { 'data-leaf': c.isLeaf ? '' : undefined, 'data-hidden': c.hidden ? '' : undefined, 'data-empty': !c.isLeaf && n === 0 ? '' : undefined, 'data-share': c.isLeaf ? undefined : shareOf(n, of) }
   const body = (
     <>
-      {c.image ? <img className={cx('cardImage')} src={c.image} alt="" width={48} height={48} /> : null}
+      {c.image ? <NodeImage className={cx('cardImage')} src={c.image} alt={c.imageAlt} mask={c.imageMask} size={48} unstyled={unstyled} /> : null}
       <span className={cx('cardName')}>{c.everyday || c.name}</span>
       {c.everyday ? <span className={cx('cardSystemName')}>{c.name}</span> : null}
       {!c.isLeaf ? (
@@ -185,7 +203,7 @@ export type BrowserProps = {
   text?: Partial<BrowserText>
   thresholds?: Partial<Thresholds>
   /** Curated sections for a big level: a heading and the paths of the children in it. */
-  sections?: { id: string; title: string; image?: string | null; paths: string[] }[]
+  sections?: { id: string; title: string; image?: string | null; imageAlt?: string | null; imageMask?: boolean; paths: string[] }[]
   /** The site's link component (for example Next's), so links keep the site's routing. */
   Link?: LinkLike
   /** Force a layout (otherwise it's chosen from the counts). */
@@ -224,7 +242,7 @@ export function NestedDocsBrowser({ data, noun, text: textIn, thresholds, sectio
   const total = visible.reduce((n, c) => n + leavesOf(c, showHidden), 0)
   const hiddenLeaves = data.children.reduce((n, c) => n + (c.hiddenLeaves ?? 0), 0)
   const H = headingLevel === 1 ? 'h1' : 'h2'
-  const common: Common = { text, Link, cx, showHidden }
+  const common: Common = { text, Link, cx, showHidden, unstyled }
   const passOn = { text, Link, showHidden, classNames, unstyled }
   const cards = (items: Child[]) => (
     <div className={cx('grid')}>
@@ -294,7 +312,7 @@ export function NestedDocsBrowser({ data, noun, text: textIn, thresholds, sectio
             return (
               <div key={s.id} className={cx('section')} data-section={s.id}>
                 <h2 className={cx('sectionTitle')}>
-                  {s.image ? <img className={cx('sectionImage')} src={s.image} alt="" width={40} height={40} /> : null}
+                  {s.image ? <NodeImage className={cx('sectionImage')} src={s.image} alt={s.imageAlt} mask={s.imageMask} size={40} unstyled={unstyled} /> : null}
                   {s.title}
                   <span className={cx('sectionCount')}>
                     {fmt(items.reduce((n, c) => n + leavesOf(c, showHidden), 0))} {text.leaves}

@@ -21,6 +21,8 @@ export const NDB_VARIABLES = {
   '--ndb-color-on-ink': 'var(--palette-surface-raised, #ffffff)',
   '--ndb-color-track': 'var(--palette-surface-sunken, #f1e9e2)',
   '--ndb-color-focus': 'var(--palette-focus, var(--palette-primary, #cf8137))',
+  /** Color of mask images (one-color icons and silhouettes). */
+  '--ndb-color-image': 'var(--palette-primary, currentColor)',
   '--ndb-radius-card': 'var(--palette-radius-lg, 14px)',
   '--ndb-radius-control': 'var(--palette-radius-md, 8px)',
   '--ndb-radius-pill': '999px',

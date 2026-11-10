@@ -33,7 +33,7 @@ async function cached<T>(key: string, ttlMs: number, make: () => Promise<T>): Pr
 
 const describe = (o: BrowserOptions, doc: Lean): Described => {
   const d = o.describe?.(doc) ?? {}
-  return { name: d.name ?? String(doc[o.labelField ?? 'name'] ?? ''), everyday: d.everyday ?? null, image: d.image ?? null }
+  return { name: d.name ?? String(doc[o.labelField ?? 'name'] ?? ''), everyday: d.everyday ?? null, image: d.image ?? null, imageAlt: d.imageAlt ?? null, imageMask: Boolean(d.imageMask) }
 }
 
 const hides = (o: BrowserOptions) => Boolean(o.hideByDefault && ('notEquals' in o.hideByDefault || 'equals' in o.hideByDefault))
@@ -94,6 +94,8 @@ async function childrenUnder(payload: Payload, o: BrowserOptions, root: string, 
         name: doc.name,
         everyday: doc.everyday,
         image: doc.image,
+        imageAlt: doc.imageAlt,
+        imageMask: doc.imageMask,
         path,
         href: o.href ? o.href(path) : null,
         isLeaf: leaf,
@@ -129,7 +131,9 @@ export function browse(payload: Payload, o: BrowserOptions, path: string): Promi
       node: self ? { path: clean, ...describe(o, self) } : { path: '', name: o.rootLabel ?? 'All', everyday: null, image: null },
       ancestors: prefixes.slice(0, -1).flatMap((p) => {
         const d = byPath.get(p)
-        return d ? [{ path: p, ...describe(o, d), href: o.href ? o.href(p) : null }] : []
+        if (!d) return []
+        const { name, everyday, image } = describe(o, d)
+        return [{ path: p, name, everyday, image, href: o.href ? o.href(p) : null }]
       }),
       children: await childrenUnder(payload, o, clean),
     }

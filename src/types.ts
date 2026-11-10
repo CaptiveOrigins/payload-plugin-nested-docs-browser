@@ -3,7 +3,7 @@ import type { Access, PayloadRequest } from 'payload'
 import type { Thresholds } from './core/index.js'
 
 /** What a node shows as: its name, its everyday name and an image. */
-export type Described = { name: string; everyday: string | null; image: string | null }
+export type Described = { name: string; everyday: string | null; image: string | null; imageAlt?: string | null; imageMask?: boolean }
 
 export type BrowserOptions = {
   /** The hierarchy collection (one per plugin instance). */
@@ -22,7 +22,7 @@ export type BrowserOptions = {
   /** Equality filters every query applies (for example `{ _status: 'published' }`). */
   filter?: Record<string, unknown>
   /** Name, everyday name and image from a raw document. */
-  describe?: (doc: Record<string, unknown>) => Partial<{ name: string; everyday: string | null; image: string | null }>
+  describe?: (doc: Record<string, unknown>) => Partial<{ name: string; everyday: string | null; image: string | null; imageAlt: string | null; imageMask: boolean }>
   /** Link for a node's page, from its path. */
   href?: (path: string) => string
   /** Name of the top of the tree. Default "All". */

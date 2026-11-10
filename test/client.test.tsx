@@ -109,3 +109,30 @@ describe('styling hooks', () => {
     expect(within(bare as HTMLElement).getAllByRole('listitem').length).toBeGreaterThanOrEqual(65)
   })
 })
+
+describe('mask images (one-color icons and silhouettes)', () => {
+  const families = [
+    kid('Testudinidae', 47, { image: '/s/tortoise.svg', imageAlt: 'No photo yet (tortoise)', imageMask: true }),
+    kid('Emydidae', 58, { image: '/s/turtle.svg', imageMask: true }),
+    kid('Chelidae', 66, { image: '/photo.jpg', imageAlt: 'A snake-necked turtle' }),
+  ]
+  it('draws a mask in the theme’s image color, announced by its alt text, or decorative without one', () => {
+    const { container } = render(<NestedDocsBrowser data={data(families)} noun="families" />)
+    const tortoise = screen.getByRole('img', { name: 'No photo yet (tortoise)' })
+    expect(tortoise.tagName).toBe('SPAN')
+    expect(tortoise.getAttribute('data-mask')).toBe('')
+    expect(tortoise.style.backgroundColor).toBe('var(--ndb-color-image)')
+    expect(tortoise.style.maskImage || tortoise.style.getPropertyValue('-webkit-mask-image')).toContain('/s/tortoise.svg')
+    const turtle = container.querySelector('[data-mask][aria-hidden="true"]')
+    expect(turtle).toBeTruthy()
+    // A picture stays a picture, with its alt text.
+    expect(screen.getByRole('img', { name: 'A snake-necked turtle' }).tagName).toBe('IMG')
+  })
+
+  it('unstyled, a mask falls back to a plain picture with its alt text', () => {
+    render(<NestedDocsBrowser data={data(families)} noun="families" unstyled />)
+    const tortoise = screen.getByRole('img', { name: 'No photo yet (tortoise)' })
+    expect(tortoise.tagName).toBe('IMG')
+    expect(tortoise.getAttribute('src')).toBe('/s/tortoise.svg')
+  })
+})
