@@ -20,13 +20,22 @@ function modelOf(payload: Payload, slug: string): Model {
   return model
 }
 
-/** Small per-process cache; cleared when the collection or the groups change. */
+/**
+ * Small per-process cache; cleared when the collection or the groups change. It holds at most `CACHE_MAX` entries
+ * (the oldest goes first) and never keeps a miss, so requests for made-up paths can't make it grow.
+ */
+export const CACHE_MAX = 500
 const cache = new Map<string, { at: number; value: unknown }>()
 export const clearBrowseCache = () => cache.clear()
-async function cached<T>(key: string, ttlMs: number, make: () => Promise<T>): Promise<T> {
+/** How many entries the cache holds now (for tests and monitoring). */
+export const browseCacheSize = () => cache.size
+export async function cached<T>(key: string, ttlMs: number, make: () => Promise<T>, keep: (value: T) => boolean = () => true): Promise<T> {
   const hit = cache.get(key)
   if (hit && Date.now() - hit.at < ttlMs) return hit.value as T
   const value = await make()
+  cache.delete(key)
+  if (!keep(value)) return value
+  while (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value!)
   cache.set(key, { at: Date.now(), value })
   return value
 }
@@ -137,7 +146,7 @@ export function browse(payload: Payload, o: BrowserOptions, path: string): Promi
       }),
       children: await childrenUnder(payload, o, clean),
     }
-  })
+  }, (r) => r.node !== null)
 }
 
 export type Group = { id: string; name: string; description: string | null; image: string | null; order: number; rule: GroupRule }
@@ -186,7 +195,7 @@ export function browseGroup(payload: Payload, o: BrowserOptions, id: string): Pr
     const children: Child[] = []
     for (const root of group.rule.include) children.push(...(await childrenUnder(payload, o, root, group.rule.exclude ?? [])))
     return { group, children }
-  })
+  }, (r) => r !== null)
 }
 
 /** For curators: leaves under `scope` that are in no group, or in more than one. */

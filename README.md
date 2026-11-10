@@ -3,7 +3,7 @@
 Nested Docs Browser for Payload: browse large hierarchies in pages that adapt to how much is inside, with Show all on every shortened view, an A–Z index and saved groups over the tree.
 
 **Status:** early, 0.x.
-- **Tested:** 24 tests: the core, the Payload side against a real Payload 3.92 and MongoDB with a made-up reptile slice, and the React views in jsdom.
+- **Tested:** 27 tests: the core, the Payload side against a real Payload 3.92 and MongoDB with a made-up reptile slice, and the React views in jsdom.
 - **Real data:** tried read-only on a real taxonomy of 23,860 records. A level took 0.25 to 1.2 seconds before caching. In a real browser at 1280 and 375 px, with the lists open, axe found nothing.
 - **Not tried yet:** inside a site, or with a screen reader.
 
@@ -58,6 +58,13 @@ return <NestedDocsBrowser data={data} noun="families" Link={Link} />
 ```
 
 Or over HTTP: `GET /api/nested-docs-browser/<collection>?path=…`, `…/groups`, `…/groups/<id>`, and `…/groups-check?scope=…`. The check is only for people allowed to change groups.
+
+**What it shows, and to whom.** For speed, the browser reads the collection straight from MongoDB, so Payload's access rules, drafts and hidden fields don't apply to it. Only two options decide what it shows:
+
+- `filter` (a MongoDB filter) must leave out anything visitors mustn't see: drafts (`_status: 'published'` if the collection has drafts), private or archived records, another site's records on a multi-site install.
+- `access` decides who may call the endpoints. Without it they're public.
+
+Names, everyday names and images come from `describe`, so return only what's fine to show. It suits public reference data, such as a taxonomy. The cache holds at most 500 entries and never keeps a miss.
 
 ## Styling
 

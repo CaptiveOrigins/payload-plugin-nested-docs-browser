@@ -3,7 +3,8 @@ import { MongoMemoryReplSet } from 'mongodb-memory-server'
 import { buildConfig, getPayload, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { browse, browseGroup, groupCheck, groupsOverview, nestedDocsBrowser, presentChildren, type BrowserOptions } from '../src/index.js'
+import { browse, browseCacheSize, browseGroup, CACHE_MAX, clearBrowseCache, groupCheck, groupsOverview, nestedDocsBrowser, presentChildren, type BrowserOptions } from '../src/index.js'
+import { cached } from '../src/browse.js'
 
 /**
  * A made-up slice of a reptile taxonomy, shaped like a real one: a materialized path, a rank, and an
@@ -109,6 +110,20 @@ describe('one level of the tree', () => {
     expect(top.node).toMatchObject({ name: 'Reptiles', path: '' })
     expect(top.children.map((c) => [c.name, c.leaves])).toEqual([['Reptilia', 6]])
     expect((await browse(payload, opts, 'reptilia/nothing-here')).node).toBeNull()
+  })
+
+  it('never caches a miss, and holds at most CACHE_MAX entries', async () => {
+    clearBrowseCache()
+    for (let i = 0; i < 50; i++) await browse(payload, opts, `made-up/${i}/${'x'.repeat(200)}`)
+    expect(await browseGroup(payload, opts, 'no-such-group')).toBeNull()
+    expect(browseCacheSize()).toBe(0)
+    await browse(payload, opts, 'reptilia')
+    expect(browseCacheSize()).toBe(1)
+    for (let i = 0; i < CACHE_MAX + 25; i++) await cached(`k${i}`, 60_000, async () => i)
+    expect(browseCacheSize()).toBe(CACHE_MAX)
+    // The oldest went first: the newest key is still there.
+    expect(await cached(`k${CACHE_MAX + 24}`, 60_000, async () => -1)).toBe(CACHE_MAX + 24)
+    clearBrowseCache()
   })
 })
 
