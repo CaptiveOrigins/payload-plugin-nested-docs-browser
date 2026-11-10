@@ -20,12 +20,13 @@ Kept by this repo's owning session, per `~/Code/CLAUDE.md`, "Test self-audits". 
 | Curator check, and its refusal without permission | plugin: "lists species in no group…", "refuses the curator check…" |
 | Endpoints answer; cache refreshes when the tree changes | plugin: "the endpoints and the cache" |
 | `notEquals`: unknown and missing hidden; branches with shown leaves never hidden | plugin: "showing only what is confirmed" |
-| Views: Show all reveals every child, the A–Z bar, the fossils switch, sections, translation | client: all six |
+| Views: Show all reveals every child, the A–Z bar, the fossils switch, sections, translation | client: six tests |
+| Styling hooks: stable classes, data attributes, variables falling back to theme tokens; per-element classes; unstyled mode still works | client: "styling hooks" (2) |
 
 Checked outside the tests: a real taxonomy read-only (timings), and a real browser at 1280 and 375 px with axe (clean, lists open).
 
 Gaps:
-- **Screen reader:** not tried. The views use native buttons, `aria-expanded`, `aria-pressed` and labelled navs.
+- **Screen reader:** not tried. The views use native buttons, `aria-expanded`, `aria-pressed` and labeled navs.
 - **Inside a site:** not tried until the first site wires it in.
 - **Databases other than MongoDB:** not supported yet, and the README says so.
 

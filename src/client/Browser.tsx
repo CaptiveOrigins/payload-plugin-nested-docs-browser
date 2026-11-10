@@ -1,8 +1,9 @@
 'use client'
 
-import { useId, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
 
 import { chooseLayout, letterIndex, leavesOf, presentChildren, type Child, type Layout, type Thresholds } from '../core/index.js'
+import { NDB_STYLES } from './styles.js'
 
 /** Every word the browser shows, so a site can translate them. `{n}`, `{of}` and `{noun}` are filled in. */
 export const DEFAULT_TEXT = {
@@ -31,41 +32,70 @@ export type BrowserText = typeof DEFAULT_TEXT
 const fill = (s: string, v: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (_, k: string) => (k in v ? String(v[k]) : `{${k}}`))
 const fmt = (n: number) => new Intl.NumberFormat().format(n)
 
-const S = {
-  grid: (min: number): CSSProperties => ({ display: 'grid', gap: 16, gridTemplateColumns: `repeat(auto-fill, minmax(min(${min}px, 100%), 1fr))`, marginTop: 16 }),
-  card: { display: 'flex', flexDirection: 'column', gap: 6, padding: 18, border: '1px solid var(--ndb-line, #e5ddd6)', borderRadius: 14, background: 'var(--ndb-card, #fff)', color: 'inherit', textDecoration: 'none' } as CSSProperties,
-  muted: { color: 'var(--ndb-muted, #6e5d57)' } as CSSProperties,
-  bar: { height: 6, background: 'var(--ndb-track, #f1e9e2)', borderRadius: 3, overflow: 'hidden', marginTop: 4 } as CSSProperties,
-  fillBar: (pct: number): CSSProperties => ({ display: 'block', height: '100%', width: `${pct}%`, background: 'var(--ndb-accent, #cf8137)' }),
-  pill: { display: 'inline-flex', alignItems: 'center', minHeight: 44, padding: '0 16px', border: '1px solid var(--ndb-line, #e5ddd6)', borderRadius: 999, background: 'var(--ndb-card, #fff)', font: 'inherit', fontWeight: 600, color: 'inherit', cursor: 'pointer' } as CSSProperties,
-  compact: { marginTop: 12, padding: '12px 16px', border: '1px solid var(--ndb-line, #e5ddd6)', borderRadius: 12, background: 'var(--ndb-card, #fff)' } as CSSProperties,
-  cols: { listStyle: 'none', margin: '8px 0 0', padding: 0, columns: '3 15rem', columnGap: 28 } as CSSProperties,
-  row: { breakInside: 'avoid', display: 'flex', justifyContent: 'space-between', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--ndb-line-soft, #f1ebe6)', minHeight: 32 } as CSSProperties,
+/** Every element that can be styled, by slot name. Pass `classNames` to add your own classes to any of them. */
+export type Slot =
+  | 'root' | 'crumbs' | 'crumbsList' | 'crumb' | 'crumbLink' | 'title' | 'systemName' | 'summary' | 'switch' | 'switchInput' | 'switchCount'
+  | 'showing' | 'grid' | 'card' | 'cardImage' | 'cardName' | 'cardSystemName' | 'cardCount' | 'cardBar' | 'cardBarFill'
+  | 'button' | 'showAll' | 'showAllButton' | 'compact' | 'compactTools' | 'compactSort' | 'compactList' | 'compactRow' | 'compactName' | 'compactCount'
+  | 'compactEmpty' | 'compactEmptySummary' | 'letters' | 'lettersButton' | 'lettersCount' | 'section' | 'sectionTitle' | 'sectionCount' | 'sectionImage' | 'nothing'
+export type ClassNames = Partial<Record<Slot, string>>
+
+const BASE: Record<Slot, string> = {
+  root: 'ndb', crumbs: 'ndb__crumbs', crumbsList: 'ndb__crumbs-list', crumb: 'ndb__crumb', crumbLink: 'ndb__crumb-link', title: 'ndb__title',
+  systemName: 'ndb__system-name', summary: 'ndb__summary', switch: 'ndb__switch', switchInput: 'ndb__switch-input', switchCount: 'ndb__switch-count',
+  showing: 'ndb__showing', grid: 'ndb__grid', card: 'ndb-card', cardImage: 'ndb-card__image', cardName: 'ndb-card__name', cardSystemName: 'ndb-card__system-name',
+  cardCount: 'ndb-card__count', cardBar: 'ndb-card__bar', cardBarFill: 'ndb-card__bar-fill', button: 'ndb-button', showAll: 'ndb-showall', showAllButton: 'ndb-showall__button',
+  compact: 'ndb-compact', compactTools: 'ndb-compact__tools', compactSort: 'ndb-compact__sort', compactList: 'ndb-compact__list', compactRow: 'ndb-compact__row',
+  compactName: 'ndb-compact__name', compactCount: 'ndb-compact__count', compactEmpty: 'ndb-compact__empty', compactEmptySummary: 'ndb-compact__empty-summary',
+  letters: 'ndb-letters', lettersButton: 'ndb-letters__button', lettersCount: 'ndb-letters__count', section: 'ndb-section', sectionTitle: 'ndb-section__title',
+  sectionCount: 'ndb-section__count', sectionImage: 'ndb-section__image', nothing: 'ndb__nothing',
 }
 
-export type LinkLike = (props: { href: string; children: ReactNode; style?: CSSProperties; className?: string }) => ReactNode
-const DefaultLink: LinkLike = ({ href, children, style, className }) => (
-  <a href={href} style={style} className={className}>
+/** Class names for a slot: its stable `ndb-*` class (left out when unstyled), plus any the site passed. */
+type Cx = (slot: Slot, ...extra: (string | false | null | undefined)[]) => string
+const makeCx =
+  (classNames: ClassNames = {}, unstyled = false): Cx =>
+  (slot, ...extra) =>
+    [unstyled ? null : BASE[slot], classNames[slot], ...extra].filter(Boolean).join(' ')
+
+/** The share bucket a count falls in, for styling by size (`data-share="large"`). */
+const shareOf = (n: number, of: number) => (of <= 0 ? 'none' : n / of >= 0.25 ? 'large' : n / of >= 0.05 ? 'medium' : 'small')
+
+export type LinkLike = (props: { href: string; children: ReactNode; className?: string }) => ReactNode
+const DefaultLink: LinkLike = ({ href, children, className }) => (
+  <a href={href} className={className}>
     {children}
   </a>
 )
 
+/**
+ * The default stylesheet, rendered once per page. Leave it out with `unstyled` (and style the `ndb-*`
+ * classes or your own `classNames` yourself), or import the same CSS from `…/client/styles.css`.
+ */
+export function NestedDocsBrowserStyles({ nonce }: { nonce?: string }) {
+  return <style nonce={nonce} data-ndb-styles="">{NDB_STYLES}</style>
+}
+
+type Common = { text: BrowserText; Link: LinkLike; cx: Cx; showHidden: boolean }
+
 /** One child as a card: image, everyday name over the system name, count and a share bar. */
-function ChildCard({ c, of, text, Link, showHidden }: { c: Child; of: number; text: BrowserText; Link: LinkLike; showHidden: boolean }) {
+function ChildCard({ c, of, text, Link, cx, showHidden }: Common & { c: Child; of: number }) {
   const n = leavesOf(c, showHidden)
+  const pct = of > 0 ? Math.max(1.5, Math.round((n / of) * 100)) : 0
+  const data = { 'data-leaf': c.isLeaf ? '' : undefined, 'data-hidden': c.hidden ? '' : undefined, 'data-empty': !c.isLeaf && n === 0 ? '' : undefined, 'data-share': c.isLeaf ? undefined : shareOf(n, of) }
   const body = (
     <>
-      {c.image ? <img src={c.image} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'contain' }} /> : null}
-      <span style={{ fontWeight: 650 }}>{c.everyday || c.name}</span>
-      {c.everyday ? <span style={{ ...S.muted, fontStyle: 'italic', fontSize: '.93em' }}>{c.name}</span> : null}
+      {c.image ? <img className={cx('cardImage')} src={c.image} alt="" width={48} height={48} /> : null}
+      <span className={cx('cardName')}>{c.everyday || c.name}</span>
+      {c.everyday ? <span className={cx('cardSystemName')}>{c.name}</span> : null}
       {!c.isLeaf ? (
         <>
-          <span style={{ ...S.muted, fontSize: '.93em' }}>
+          <span className={cx('cardCount')}>
             {fmt(n)} {n === 1 ? text.leaf : text.leaves}
           </span>
           {of > 0 ? (
-            <span style={S.bar} aria-hidden="true">
-              <span style={S.fillBar(Math.max(1.5, Math.round((n / of) * 100)))} />
+            <span className={cx('cardBar')} aria-hidden="true">
+              <span className={cx('cardBarFill')} style={{ width: `${pct}%` }} />
             </span>
           ) : null}
         </>
@@ -73,41 +103,56 @@ function ChildCard({ c, of, text, Link, showHidden }: { c: Child; of: number; te
     </>
   )
   return c.href ? (
-    <Link href={c.href} style={S.card}>
-      {body}
-    </Link>
+    <span style={{ display: 'contents' }} {...data}>
+      <Link href={c.href} className={cx('card')}>
+        {body}
+      </Link>
+    </span>
   ) : (
-    <div style={S.card}>{body}</div>
+    <div className={cx('card')} {...data}>
+      {body}
+    </div>
   )
 }
 
 /** The compact list behind "Show all": several columns, sorted by size or A–Z, with empty records folded. */
-export function CompactList({ items, empty = [], text, Link, showHidden = false, defaultSort = 'size' }: { items: Child[]; empty?: Child[]; text: BrowserText; Link?: LinkLike; showHidden?: boolean; defaultSort?: 'size' | 'az' }) {
+export function CompactList({ items, empty = [], text: textIn, Link, showHidden = false, defaultSort = 'size', classNames, unstyled }: { items: Child[]; empty?: Child[]; text?: Partial<BrowserText>; Link?: LinkLike; showHidden?: boolean; defaultSort?: 'size' | 'az'; classNames?: ClassNames; unstyled?: boolean }) {
+  const text = { ...DEFAULT_TEXT, ...textIn }
+  const cx = makeCx(classNames, unstyled)
   const [sort, setSort] = useState(defaultSort)
   const L = Link ?? DefaultLink
   const sorted = useMemo(() => [...items].sort(sort === 'az' ? (a, b) => a.name.localeCompare(b.name) : (a, b) => leavesOf(b, showHidden) - leavesOf(a, showHidden) || a.name.localeCompare(b.name)), [items, sort, showHidden])
-  const row = (c: Child) => (
-    <li key={c.id} style={S.row}>
-      {c.href ? <L href={c.href}>{c.everyday ? `${c.everyday} (${c.name})` : c.name}</L> : <span>{c.everyday ? `${c.everyday} (${c.name})` : c.name}</span>}
-      <span style={{ ...S.muted, fontVariantNumeric: 'tabular-nums' }}>{c.isLeaf ? '' : fmt(leavesOf(c, showHidden))}</span>
-    </li>
-  )
+  const row = (c: Child) => {
+    const label = c.everyday ? `${c.everyday} (${c.name})` : c.name
+    return (
+      <li key={c.id} className={cx('compactRow')} data-leaf={c.isLeaf ? '' : undefined} data-hidden={c.hidden ? '' : undefined}>
+        {c.href ? (
+          <L href={c.href} className={cx('compactName')}>
+            {label}
+          </L>
+        ) : (
+          <span className={cx('compactName')}>{label}</span>
+        )}
+        <span className={cx('compactCount')}>{c.isLeaf ? '' : fmt(leavesOf(c, showHidden))}</span>
+      </li>
+    )
+  }
   return (
-    <div style={S.compact}>
-      <div role="group" aria-label={text.sortLabel} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', ...S.muted, fontSize: '.9em' }}>
+    <div className={cx('compact')} data-sort={sort}>
+      <div role="group" aria-label={text.sortLabel} className={cx('compactTools')}>
         {text.sortLabel}:
         {(['size', 'az'] as const).map((k) => (
-          <button key={k} type="button" aria-pressed={sort === k} onClick={() => setSort(k)} style={{ ...S.pill, minHeight: 36, fontWeight: 400, ...(sort === k ? { background: 'var(--ndb-ink, #3b2a26)', color: 'var(--ndb-on-ink, #fff)' } : {}) }}>
+          <button key={k} type="button" aria-pressed={sort === k} onClick={() => setSort(k)} className={cx('button', cx('compactSort'))}>
             {k === 'size' ? text.sortLargest : text.sortAz}
           </button>
         ))}
         <span>{fill(text.withLeaves, { n: fmt(items.length) })}</span>
       </div>
-      <ul style={S.cols}>{sorted.map(row)}</ul>
+      <ul className={cx('compactList')}>{sorted.map(row)}</ul>
       {empty.length ? (
-        <details style={{ marginTop: 10 }}>
-          <summary style={{ minHeight: 44, display: 'flex', alignItems: 'center', cursor: 'pointer', ...S.muted }}>{fill(text.emptyFold, { n: fmt(empty.length) })}</summary>
-          <ul style={S.cols}>{empty.map(row)}</ul>
+        <details className={cx('compactEmpty')}>
+          <summary className={cx('compactEmptySummary')}>{fill(text.emptyFold, { n: fmt(empty.length) })}</summary>
+          <ul className={cx('compactList')}>{empty.map(row)}</ul>
         </details>
       ) : null}
     </div>
@@ -115,16 +160,18 @@ export function CompactList({ items, empty = [], text, Link, showHidden = false,
 }
 
 /** "Show all": a button that opens the compact list in place. */
-export function ShowAll({ items, empty, noun, text, Link, showHidden, label }: { items: Child[]; empty?: Child[]; noun: string; text: BrowserText; Link?: LinkLike; showHidden?: boolean; label?: string }) {
+export function ShowAll({ items, empty, noun, text: textIn, Link, showHidden, label, classNames, unstyled }: { items: Child[]; empty?: Child[]; noun: string; text?: Partial<BrowserText>; Link?: LinkLike; showHidden?: boolean; label?: string; classNames?: ClassNames; unstyled?: boolean }) {
+  const text = { ...DEFAULT_TEXT, ...textIn }
+  const cx = makeCx(classNames, unstyled)
   const [open, setOpen] = useState(false)
   const id = useId()
   return (
-    <div>
-      <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} style={{ ...S.pill, marginTop: 12 }}>
+    <div className={cx('showAll')} data-open={open ? '' : undefined}>
+      <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className={cx('button', cx('showAllButton'))}>
         {open ? text.showFewer : (label ?? fill(text.showAll, { of: fmt(items.length + (empty?.length ?? 0)), noun }))}
       </button>
       <div id={id} hidden={!open}>
-        {open ? <CompactList items={items} empty={empty} text={text} Link={Link} showHidden={showHidden} /> : null}
+        {open ? <CompactList items={items} empty={empty} text={text} Link={Link} showHidden={showHidden} classNames={classNames} unstyled={unstyled} /> : null}
       </div>
     </div>
   )
@@ -141,93 +188,100 @@ export type BrowserProps = {
   sections?: { id: string; title: string; image?: string | null; paths: string[] }[]
   /** The site's link component (for example Next's), so links keep the site's routing. */
   Link?: LinkLike
-  /** Breadcrumb link to the top, if any. */
-  rootHref?: string | null
   /** Force a layout (otherwise it's chosen from the counts). */
   layout?: Layout
   /** Heading level for the node's name. */
   headingLevel?: 1 | 2
+  /** Extra classes per element, added to the stable `ndb-*` ones. */
+  classNames?: ClassNames
+  /** Leave out the default stylesheet and the `ndb-*` classes, for a site that styles everything itself. */
+  unstyled?: boolean
+  /** Render the default stylesheet here (default true unless unstyled). Turn off if the page imports styles.css. */
+  includeStyles?: boolean
+  /** CSP nonce for the inline stylesheet. */
+  nonce?: string
 }
 
 /**
  * One level of a large tree, laid out to suit how much is inside: a gallery for a few, a card grid for a
  * moderate number, sections or an A–Z index for many, and cards for leaves. Every shortened view has
  * "Show all", empty records are listed in their own fold, and hidden-by-default ones are behind a switch.
+ *
+ * Styling: every element has a stable `ndb-*` class and state is in data attributes; colors, gaps, radii
+ * and sizes are `--ndb-*` variables that fall back to `--palette-*` theme tokens. `classNames` adds classes
+ * per element; `unstyled` leaves everything to the site.
  */
-export function NestedDocsBrowser({ data, noun, text: textIn, thresholds, sections, Link: LinkIn, rootHref, layout: forced, headingLevel = 1 }: BrowserProps) {
+export function NestedDocsBrowser({ data, noun, text: textIn, thresholds, sections, Link: LinkIn, layout: forced, headingLevel = 1, classNames, unstyled = false, includeStyles, nonce }: BrowserProps) {
   const text = { ...DEFAULT_TEXT, ...textIn }
   const Link = LinkIn ?? DefaultLink
+  const cx = makeCx(classNames, unstyled)
   const [showHidden, setShowHidden] = useState(false)
   const [letter, setLetter] = useState<string | null>(null)
   const layout = forced ?? chooseLayout(data.children, { hasSections: Boolean(sections?.length), thresholds })
-  const firstShown = layout === 'leaves' ? 1000 : layout === 'gallery' ? 1000 : (thresholds?.firstShown ?? 12)
+  const firstShown = layout === 'leaves' || layout === 'gallery' ? 1000 : (thresholds?.firstShown ?? 12)
   const p = presentChildren(data.children, { showHidden, firstShown })
   const visible = [...p.first, ...p.rest]
   const total = visible.reduce((n, c) => n + leavesOf(c, showHidden), 0)
   const hiddenLeaves = data.children.reduce((n, c) => n + (c.hiddenLeaves ?? 0), 0)
   const H = headingLevel === 1 ? 'h1' : 'h2'
-  const crumbs = data.ancestors.length || rootHref ? (
-    <nav aria-label={text.where} style={{ ...S.muted, fontSize: '.95em', marginBottom: 8 }}>
-      <ol style={{ listStyle: 'none', display: 'flex', flexWrap: 'wrap', gap: 6, margin: 0, padding: 0 }}>
-        {data.ancestors.map((a, i) => (
-          <li key={i} style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-            {i > 0 ? <span aria-hidden="true">›</span> : null}
-            {a.href ? (
-              <Link href={a.href} style={{ display: 'inline-flex', minHeight: 44, alignItems: 'center', color: 'inherit' }}>
-                {a.everyday || a.name}
-              </Link>
-            ) : (
-              a.everyday || a.name
-            )}
-          </li>
-        ))}
-      </ol>
-    </nav>
-  ) : null
-  const cards = (items: Child[], min = 230) => (
-    <div style={S.grid(min)}>
+  const common: Common = { text, Link, cx, showHidden }
+  const passOn = { text, Link, showHidden, classNames, unstyled }
+  const cards = (items: Child[]) => (
+    <div className={cx('grid')}>
       {items.map((c) => (
-        <ChildCard key={c.id} c={c} of={total} text={text} Link={Link} showHidden={showHidden} />
+        <ChildCard key={c.id} c={c} of={total} {...common} />
       ))}
     </div>
   )
   const byPath = new Map(visible.map((c) => [c.path, c]))
 
   return (
-    <section>
-      {crumbs}
+    <section className={cx('root')} data-layout={layout} data-show-hidden={showHidden ? '' : undefined}>
+      {(includeStyles ?? !unstyled) ? <NestedDocsBrowserStyles nonce={nonce} /> : null}
+      {data.ancestors.length ? (
+        <nav aria-label={text.where} className={cx('crumbs')}>
+          <ol className={cx('crumbsList')}>
+            {data.ancestors.map((a, i) => (
+              <li key={i} className={cx('crumb')}>
+                {i > 0 ? <span aria-hidden="true">›</span> : null}
+                {a.href ? (
+                  <Link href={a.href} className={cx('crumbLink')}>
+                    {a.everyday || a.name}
+                  </Link>
+                ) : (
+                  a.everyday || a.name
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      ) : null}
       {data.node ? (
         <>
-          <H style={{ margin: '4px 0 6px' }}>{data.node.everyday || data.node.name}</H>
-          {data.node.everyday ? <p style={{ ...S.muted, fontStyle: 'italic', margin: 0 }}>{data.node.name}</p> : null}
+          <H className={cx('title')}>{data.node.everyday || data.node.name}</H>
+          {data.node.everyday ? <p className={cx('systemName')}>{data.node.name}</p> : null}
         </>
       ) : null}
-      <p style={{ ...S.muted, margin: '6px 0 0' }}>
+      <p className={cx('summary')}>
         {fmt(total)} {total === 1 ? text.leaf : text.leaves}
         {layout !== 'leaves' ? ` · ${fill(text.allOf, { of: fmt(visible.length), noun })}` : ''}
       </p>
       {hiddenLeaves > 0 ? (
-        <label style={{ display: 'inline-flex', gap: 8, alignItems: 'center', minHeight: 44, marginTop: 8 }}>
-          <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} style={{ width: 20, height: 20 }} />
-          {text.includeHidden} <span style={S.muted}>({fmt(hiddenLeaves)})</span>
+        <label className={cx('switch')}>
+          <input type="checkbox" className={cx('switchInput')} checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} />
+          {text.includeHidden} <span className={cx('switchCount')}>({fmt(hiddenLeaves)})</span>
         </label>
       ) : null}
 
-      {visible.length === 0 ? <p>{text.nothing}</p> : null}
+      {visible.length === 0 ? <p className={cx('nothing')}>{text.nothing}</p> : null}
 
-      {layout === 'gallery' || layout === 'leaves' ? cards(visible, layout === 'gallery' ? 280 : 220) : null}
+      {layout === 'gallery' || layout === 'leaves' ? cards(visible) : null}
 
       {layout === 'cards' ? (
         <>
           {cards(p.first)}
-          {p.rest.length ? (
-            <>
-              <p style={{ ...S.muted, marginTop: 10 }}>{fill(text.showingLargest, { n: fmt(p.first.length), of: fmt(visible.length), noun })}</p>
-              <ShowAll items={visible} empty={p.empty} noun={noun} text={text} Link={Link} showHidden={showHidden} />
-            </>
-          ) : p.empty.length ? (
-            <ShowAll items={visible} empty={p.empty} noun={noun} text={text} Link={Link} showHidden={showHidden} />
-          ) : null}
+          {p.rest.length ? <p className={cx('showing')}>{fill(text.showingLargest, { n: fmt(p.first.length), of: fmt(visible.length), noun })}</p> : null}
+          {p.rest.length || p.empty.length ? <ShowAll items={visible} empty={p.empty} noun={noun} {...passOn} /> : null}
         </>
       ) : null}
 
@@ -238,21 +292,21 @@ export function NestedDocsBrowser({ data, noun, text: textIn, thresholds, sectio
             if (!items.length) return null
             const sp = presentChildren(items, { showHidden, firstShown: 8 })
             return (
-              <div key={s.id} style={{ marginTop: 36 }}>
-                <h2 style={{ display: 'flex', alignItems: 'center', gap: 12, margin: 0, fontSize: '1.3em' }}>
-                  {s.image ? <img src={s.image} alt="" width={40} height={40} /> : null}
+              <div key={s.id} className={cx('section')} data-section={s.id}>
+                <h2 className={cx('sectionTitle')}>
+                  {s.image ? <img className={cx('sectionImage')} src={s.image} alt="" width={40} height={40} /> : null}
                   {s.title}
-                  <span style={{ ...S.muted, fontSize: '.75em', fontWeight: 400 }}>
+                  <span className={cx('sectionCount')}>
                     {fmt(items.reduce((n, c) => n + leavesOf(c, showHidden), 0))} {text.leaves}
                   </span>
                 </h2>
                 {cards(sp.first)}
-                {sp.rest.length ? <ShowAll items={[...sp.first, ...sp.rest]} noun={noun} text={text} Link={Link} showHidden={showHidden} /> : null}
+                {sp.rest.length ? <ShowAll items={[...sp.first, ...sp.rest]} noun={noun} {...passOn} /> : null}
               </div>
             )
           })}
-          <div style={{ marginTop: 36 }}>
-            <ShowAll items={visible} empty={p.empty} noun={noun} text={text} Link={Link} showHidden={showHidden} />
+          <div className={cx('section')}>
+            <ShowAll items={visible} empty={p.empty} noun={noun} {...passOn} />
           </div>
         </>
       ) : null}
@@ -260,12 +314,12 @@ export function NestedDocsBrowser({ data, noun, text: textIn, thresholds, sectio
       {layout === 'index' || (layout === 'sections' && !sections) ? (
         <>
           {cards(p.first)}
-          <p style={{ ...S.muted, marginTop: 10 }}>{fill(text.showingLargest, { n: fmt(p.first.length), of: fmt(visible.length), noun })}</p>
-          <nav aria-label={text.letters} style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 12 }}>
+          <p className={cx('showing')}>{fill(text.showingLargest, { n: fmt(p.first.length), of: fmt(visible.length), noun })}</p>
+          <nav aria-label={text.letters} className={cx('letters')}>
             {letterIndex([...visible, ...p.empty]).map(({ letter: l, count }) => (
-              <button key={l} type="button" aria-pressed={letter === l} aria-label={fill(text.lettersFor, { letter: l, n: count })} onClick={() => setLetter(letter === l ? null : l)} style={{ ...S.pill, minWidth: 44, padding: '0 10px', borderRadius: 8, flexDirection: 'column', lineHeight: 1.1, ...(letter === l ? { background: 'var(--ndb-ink, #3b2a26)', color: 'var(--ndb-on-ink, #fff)' } : {}) }}>
+              <button key={l} type="button" aria-pressed={letter === l} aria-label={fill(text.lettersFor, { letter: l, n: count })} onClick={() => setLetter(letter === l ? null : l)} className={cx('button', cx('lettersButton'))}>
                 {l}
-                <small style={{ fontWeight: 400, fontSize: '.72em' }}>{count}</small>
+                <small className={cx('lettersCount')}>{count}</small>
               </button>
             ))}
           </nav>
@@ -275,18 +329,16 @@ export function NestedDocsBrowser({ data, noun, text: textIn, thresholds, sectio
                 key={letter}
                 items={visible.filter((c) => (c.name[0] ?? '').toUpperCase() === letter || (letter === '#' && !/[A-Z]/i.test(c.name[0] ?? '')))}
                 empty={p.empty.filter((c) => (c.name[0] ?? '').toUpperCase() === letter)}
-                text={text}
-                Link={Link}
-                showHidden={showHidden}
                 defaultSort="az"
+                {...passOn}
               />
             </div>
           ) : null}
-          <ShowAll items={visible} empty={p.empty} noun={noun} text={text} Link={Link} showHidden={showHidden} />
+          <ShowAll items={visible} empty={p.empty} noun={noun} {...passOn} />
         </>
       ) : null}
 
-      {(layout === 'gallery' || layout === 'leaves') && p.empty.length ? <ShowAll items={[]} empty={p.empty} noun={noun} text={text} Link={Link} showHidden={showHidden} label={fill(text.emptyFold, { n: fmt(p.empty.length) })} /> : null}
+      {(layout === 'gallery' || layout === 'leaves') && p.empty.length ? <ShowAll items={[]} empty={p.empty} noun={noun} label={fill(text.emptyFold, { n: fmt(p.empty.length) })} {...passOn} /> : null}
     </section>
   )
 }

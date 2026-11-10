@@ -17,7 +17,7 @@ A hierarchy with tens of thousands of documents can't be shown the same way at e
    - `collapseSingleChild`: skip levels with one child.
    - `letterIndex`: the A–Z bar.
    - Group rules: `inGroup(path, rule)` and `groupMembership`, which checks for paths in no group or in two.
-2. **Views** (`/client`): React components for each layout, plus `ShowAll`, which opens a compact list in place, sorted largest first or A–Z. Keyboard and screen-reader friendly, 44 px targets, no colours of their own (they inherit the site's).
+2. **Views** (`/client`): React components for each layout, plus `ShowAll`, which opens a compact list in place, sorted largest first or A–Z. Keyboard and screen-reader friendly, 44 px targets, no colors of their own (they inherit the site's).
 3. **Payload plugin** (`/`):
    - A `nested-groups` collection: saved everyday groups, each with a name, a description, an image, an order, and a rule (paths to include and exclude).
    - A browse endpoint that returns a node, its children with leaf counts, and the groups, worked out on the server and cached.

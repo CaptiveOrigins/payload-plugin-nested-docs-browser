@@ -80,3 +80,32 @@ describe('the browser never hides part of the tree', () => {
     expect(screen.getByRole('checkbox', { name: /Fossilien einbeziehen/ })).toBeTruthy()
   })
 })
+
+describe('styling hooks', () => {
+  it('gives every part a stable class and puts state in data attributes', () => {
+    const { container } = render(<NestedDocsBrowser data={data(genera)} noun="genera" />)
+    const root = container.querySelector('.ndb')!
+    expect(root.getAttribute('data-layout')).toBe('index')
+    for (const cls of ['ndb__title', 'ndb__summary', 'ndb__switch', 'ndb__grid', 'ndb-card', 'ndb-card__name', 'ndb-card__count', 'ndb-card__bar-fill', 'ndb-letters', 'ndb-letters__button', 'ndb-showall__button']) expect(container.querySelector(`.${cls}`), cls).toBeTruthy()
+    expect(container.querySelector('[data-share="small"], [data-share="medium"], [data-share="large"]')).toBeTruthy()
+    // The default stylesheet is rendered once, and every color in it is a variable that falls back to a theme token.
+    const style = container.querySelector('style[data-ndb-styles]')!
+    expect(style.textContent).toContain('--ndb-color-accent: var(--palette-primary')
+    expect(style.textContent).not.toMatch(/:\s*#[0-9a-f]{3,6};\s*$/im) // no bare hex outside a var() fallback
+  })
+
+  it('adds a site’s classes per element, and leaves everything to the site when unstyled', () => {
+    const { container, unmount } = render(<NestedDocsBrowser data={data(genera)} noun="genera" classNames={{ root: 'taxa', card: 'taxa-card', cardName: 'font-display' }} />)
+    expect(container.querySelector('.ndb.taxa')).toBeTruthy()
+    expect(container.querySelector('.ndb-card.taxa-card')).toBeTruthy()
+    expect(container.querySelector('.ndb-card__name.font-display')).toBeTruthy()
+    unmount()
+    const bare = render(<NestedDocsBrowser data={data(genera)} noun="genera" unstyled classNames={{ card: 'taxa-card' }} />).container
+    expect(bare.querySelector('style[data-ndb-styles]')).toBeNull()
+    expect(bare.querySelector('[class*="ndb"]')).toBeNull()
+    expect(bare.querySelector('.taxa-card')).toBeTruthy()
+    // Unstyled still works: Show all still reveals everything.
+    fireEvent.click(within(bare as HTMLElement).getByRole('button', { name: 'Show all 65 genera' }))
+    expect(within(bare as HTMLElement).getAllByRole('listitem').length).toBeGreaterThanOrEqual(65)
+  })
+})
