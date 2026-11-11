@@ -23,6 +23,17 @@ Nested Docs Browser for Payload: browse large hierarchies in pages that adapt to
 
 It needs the MongoDB adapter, and a collection that stores each document's path, like `animalia/chordata/reptilia` or a Nested Docs breadcrumb URL.
 
+## On its own, and with others
+
+**On its own.** Nested Docs Browser needs the MongoDB adapter and a collection that stores each document's path. Its default look works with no theme at all. It doesn't use any other Captive Origins plugin.
+
+**Works with:**
+
+- **Color Theory** (`@captiveorigins/payload-plugin-color-theory`): each `--ndb-*` variable falls back to a `--palette-*` token, and Color Theory writes those, so the browser follows the site's theme in light and dark. They share token names, not code; any theme that sets the same names works too.
+- **Nested Docs** (`@payloadcms/plugin-nested-docs`): its breadcrumb URL can serve as the path field.
+
+**Family.** Nested Docs Browser is in the Navigation family, with Menu. They're meant to sit side by side in a site's navigation, but nothing in either plugin's code connects them yet. The families are a working draft that may change.
+
 ## Install
 
 ```bash
