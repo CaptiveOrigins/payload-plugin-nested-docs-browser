@@ -68,12 +68,12 @@ const data = await browse(payload, options, 'animalia/chordata/reptilia/squamata
 return <NestedDocsBrowser data={data} noun="families" Link={Link} />
 ```
 
-Or over HTTP: `GET /api/nested-docs-browser/<collection>?path=…`, `…/groups`, `…/groups/<id>`, and `…/groups-check?scope=…`. The check is only for people allowed to change groups.
+Or over HTTP: `GET /api/nested-docs-browser/<collection>?path=…`, `…/groups`, `…/groups/<id>`, and `…/groups-check?scope=…`. The check is only for people allowed to change groups: the groups' `update` rule must answer exactly `true`, or a query. A query limits the check to the groups it matches (the answer's `groups` says how many), so `none` means "in none of those". An empty or malformed query, one on a field the groups don't have, any other truthy answer, and an error are all refused with 403.
 
 **What it shows, and to whom.** For speed, the browser reads the collection straight from MongoDB, so Payload's access rules, drafts and hidden fields don't apply to it. Only two options decide what it shows:
 
 - `filter` (a MongoDB filter) must leave out anything visitors mustn't see: drafts (`_status: 'published'` if the collection has drafts), private or archived records, another site's records on a multi-site install.
-- `access` decides who may call the endpoints. Without it they're public.
+- `access` decides who may call the endpoints. Without it they're public. Only an answer of exactly `true` lets a request through: `1`, `'yes'`, an object or a thrown error gets 403, never a 500.
 
 Names, everyday names and images come from `describe`, so return only what's fine to show. It suits public reference data, such as a taxonomy. The cache holds at most 500 entries and never keeps a miss.
 

@@ -203,3 +203,59 @@ describe('the endpoints and the cache', () => {
     expect((await browse(payload, opts, 'reptilia/testudines')).children[0]!.leaves).toBe(before + 1)
   })
 })
+
+describe('only an exact true, or a query that is applied', () => {
+  type Built = { endpoints: { path: string; handler: (req: unknown) => Promise<Response> }[] }
+  const build = (o: BrowserOptions) => nestedDocsBrowser(o)({ collections: [{ slug: 'taxa', fields: [] }] } as never) as unknown as Built
+  const handler = (b: Built, end: string) => b.endpoints.find((e) => e.path.endsWith(end))!.handler
+  const NOT_TRUE: [string, () => unknown][] = [
+    ['1', () => 1],
+    ["'yes'", () => 'yes'],
+    ['an object', () => ({ ok: false })],
+    ['a resolved object', async () => ({})],
+    ['a thrown error', () => {
+      throw new Error('rules store down')
+    }],
+    ['a rejected promise', async () => {
+      throw new Error('rules store down')
+    }],
+  ]
+
+  it('opens the browse endpoints only when access answers exactly true, and refuses a throw with 403', async () => {
+    const groupsId = (await groupsOverview(payload, opts))[0]!.id
+    const calls = (b: Built) => [
+      handler(b, '/taxa')({ url: 'http://x/api/nested-docs-browser/taxa?path=reptilia', payload, routeParams: {} }),
+      handler(b, '/groups')({ url: 'http://x/api/nested-docs-browser/taxa/groups', payload, routeParams: {} }),
+      handler(b, '/groups/:id')({ url: `http://x/api/nested-docs-browser/taxa/groups/${groupsId}`, payload, routeParams: { id: groupsId } }),
+    ]
+    for (const [what, answer] of NOT_TRUE)
+      for (const res of await Promise.all(calls(build({ ...opts, access: answer as never })))) expect(res.status, what).toBe(403)
+    for (const res of await Promise.all(calls(build({ ...opts, access: () => true })))) expect(res.status).toBe(200)
+  })
+
+  it('refuses the curator check on a truthy or failing update rule, and limits it to the groups a query matches', async () => {
+    const check = async (update: unknown) => {
+      const b = build({ ...opts, groups: { access: { update: update as never } } })
+      return handler(b, 'groups-check')({ url: 'http://x/api/nested-docs-browser/taxa/groups-check?scope=reptilia/squamata', payload, routeParams: {} })
+    }
+    for (const [what, answer] of NOT_TRUE) expect((await check(answer)).status, what).toBe(403)
+
+    // A query: only the groups it matches count. Here only Snakes, so every squamate but the corn snake is in none.
+    const scoped = await check(() => ({ name: { equals: 'Snakes' } }))
+    expect(scoped.status).toBe(200)
+    const s = (await scoped.json()) as { groups: number; checked: number; none: string[]; several: string[] }
+    expect(s.groups).toBe(1)
+    expect(s.none).toHaveLength(s.checked - 1)
+    expect(s.none).not.toContain('reptilia/squamata/colubridae/pantherophis/guttatus')
+
+    // A query Payload can't run on the groups is refused, never widened to every group.
+    expect((await check(() => ({ notAField: { equals: true } }))).status).toBe(403)
+    // A malformed one, which Payload would quietly skip and so match every group, is refused too.
+    expect((await check(() => ({ name: false }))).status).toBe(403)
+    expect((await check(() => ({ or: [] }))).status).toBe(403)
+
+    const all = (await (await check(() => true)).json()) as { groups: number; none: string[] }
+    expect(all.groups).toBe(4)
+    expect(all.none).toEqual(['reptilia/squamata/dibamidae/dibamus/novaeguineae'])
+  })
+})

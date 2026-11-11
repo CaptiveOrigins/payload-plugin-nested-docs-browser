@@ -1,4 +1,4 @@
-import type { Payload } from 'payload'
+import type { Payload, Where } from 'payload'
 
 import { groupMembership, inGroup, type Child, type GroupRule } from './core/index.js'
 import type { BrowserOptions, Described } from './types.js'
@@ -151,11 +151,11 @@ export function browse(payload: Payload, o: BrowserOptions, path: string): Promi
 
 export type Group = { id: string; name: string; description: string | null; image: string | null; order: number; rule: GroupRule }
 
-/** The saved everyday groups, with their rules as paths. */
-export async function groups(payload: Payload, o: BrowserOptions): Promise<Group[]> {
+/** The saved everyday groups, with their rules as paths. `where` limits them to the groups it matches (Payload refuses a query on a field that doesn't exist). */
+export async function groups(payload: Payload, o: BrowserOptions, where?: Where): Promise<Group[]> {
   const slug = (o.groups && o.groups.slug) || 'nested-groups'
   const pf = o.pathField ?? 'path'
-  const { docs } = await payload.find({ collection: slug as never, depth: 1, limit: 500, sort: 'order', overrideAccess: true, pagination: false })
+  const { docs } = await payload.find({ collection: slug as never, depth: 1, limit: 500, sort: 'order', overrideAccess: true, pagination: false, ...(where ? { where } : {}) })
   const pathOf = (v: unknown) => (v && typeof v === 'object' ? String((v as Record<string, unknown>)[pf] ?? '') : '')
   return (docs as unknown as Record<string, unknown>[]).map((g) => ({
     id: String(g.id),
@@ -198,12 +198,15 @@ export function browseGroup(payload: Payload, o: BrowserOptions, id: string): Pr
   }, (r) => r !== null)
 }
 
-/** For curators: leaves under `scope` that are in no group, or in more than one. */
-export async function groupCheck(payload: Payload, o: BrowserOptions, scope?: string) {
+/**
+ * For curators: leaves under `scope` that are in no group, or in more than one. With `where` (a curator whose groups
+ * `update` rule answers with a query), only the groups it matches count, so "none" means none of those groups.
+ */
+export async function groupCheck(payload: Payload, o: BrowserOptions, scope?: string, where?: Where) {
   const model = modelOf(payload, o.collection)
   const pf = o.pathField ?? 'path'
   const leaves = await model.find({ ...(o.filter ?? {}), [o.leaf.field]: o.leaf.equals, ...(scope ? { [pf]: { $regex: `^${escape(scope)}/` } } : {}) }, { [pf]: 1 }).lean()
-  const gs = await groups(payload, o)
+  const gs = await groups(payload, o, where)
   const m = groupMembership(leaves.map((l) => String(l[pf])), gs, scope)
-  return { checked: leaves.length, none: m.none, several: m.several }
+  return { checked: leaves.length, groups: gs.length, none: m.none, several: m.several }
 }

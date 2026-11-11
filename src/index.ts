@@ -1,5 +1,6 @@
 import type { CollectionConfig, Config, Endpoint, Plugin } from 'payload'
 
+import { exactlyTrue, trueOrWhere } from './access.js'
 import { browse, browseGroup, clearBrowseCache, groupCheck, groupsOverview } from './browse.js'
 import type { BrowserOptions } from './types.js'
 
@@ -43,7 +44,8 @@ export const nestedDocsBrowser =
   (o: BrowserOptions): Plugin =>
   (config: Config): Config => {
     const base = `/nested-docs-browser/${o.collection}`
-    const allowed = async (req: Parameters<Endpoint['handler']>[0]) => (o.access ? await o.access(req) : true)
+    // Only an exact `true` from `access` opens the endpoints: they read MongoDB directly, so this is the only gate.
+    const allowed = (req: Parameters<Endpoint['handler']>[0]) => (o.access ? exactlyTrue(() => o.access!(req)) : Promise.resolve(true))
     const refused = () => Response.json({ errors: [{ message: 'Not allowed.' }] }, { status: 403 })
     const endpoints: Endpoint[] = [
       {
@@ -74,15 +76,23 @@ export const nestedDocsBrowser =
               },
             },
             {
-              // For curators: leaves in no group or in two. Only for people allowed to change groups.
+              // For curators: leaves in no group or in two. Only for people allowed to change groups: the groups'
+              // `update` rule must answer exactly `true` (every group), or a query, which then limits the check to the
+              // groups it matches. Anything else, an error included, is refused.
               path: `${base}/groups-check`,
               method: 'get',
               handler: async (req) => {
                 const update = o.groups && o.groups.access?.update
-                const ok = update ? await update({ req } as never) : false
-                if (!ok) return refused()
+                const may = update ? await trueOrWhere(() => update({ req } as never)) : false
+                if (may === false) return refused()
                 const scope = new URL(req.url ?? '', 'http://x').searchParams.get('scope') ?? undefined
-                return Response.json(await groupCheck(req.payload, o, scope || undefined))
+                if (may === true) return Response.json(await groupCheck(req.payload, o, scope || undefined))
+                try {
+                  return Response.json(await groupCheck(req.payload, o, scope || undefined, may))
+                } catch {
+                  // A query Payload can't run on the groups (an unknown field, say) refuses rather than widening.
+                  return refused()
+                }
               },
             },
           ] satisfies Endpoint[])),
