@@ -2,7 +2,7 @@
  * The default look, entirely from CSS custom properties, so a theme changes it without touching markup.
  *
  * Each `--ndb-*` variable falls back first to a generic theme token (`--palette-*`, as written by
- * `@captiveorigins/payload-plugin-color-theory`, or any theme that sets the same names), then to a plain
+ * `@extantape/payload-plugin-color-theory`, or any theme that sets the same names), then to a plain
  * default. Set `--ndb-*` to change only this browser; set `--palette-*` to change the whole site.
  *
  * Every element has a stable class (`ndb`, `ndb-card__name`, …) and state is in data attributes

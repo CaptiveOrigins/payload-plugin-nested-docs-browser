@@ -1,5 +1,5 @@
 {
-  "name": "@captiveorigins/payload-plugin-nested-docs-browser",
+  "name": "@extantape/payload-plugin-nested-docs-browser",
   "version": "0.2.2",
   "description": "Nested Docs Browser for Payload: browse large hierarchies in pages that adapt to how much is inside, with Show all on every shortened view, an A-Z index and saved groups over the tree.",
   "keywords": [
@@ -13,13 +13,13 @@
     "browse"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/CaptiveOrigins/payload-plugin-nested-docs-browser#readme",
+  "homepage": "https://github.com/ExtantApe/payload-plugin-nested-docs-browser#readme",
   "bugs": {
-    "url": "https://github.com/CaptiveOrigins/payload-plugin-nested-docs-browser/issues"
+    "url": "https://github.com/ExtantApe/payload-plugin-nested-docs-browser/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CaptiveOrigins/payload-plugin-nested-docs-browser.git"
+    "url": "git+https://github.com/ExtantApe/payload-plugin-nested-docs-browser.git"
   },
   "type": "module",
   "exports": {

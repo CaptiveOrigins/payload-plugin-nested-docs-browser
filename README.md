@@ -29,7 +29,7 @@ It needs the MongoDB adapter, and a collection that stores each document's path,
 
 **Works with:**
 
-- **Color Theory** (`@captiveorigins/payload-plugin-color-theory`): each `--ndb-*` variable falls back to a `--palette-*` token, and Color Theory writes those, so the browser follows the site's theme in light and dark. They share token names, not code; any theme that sets the same names works too.
+- **Color Theory** (`@extantape/payload-plugin-color-theory`): each `--ndb-*` variable falls back to a `--palette-*` token, and Color Theory writes those, so the browser follows the site's theme in light and dark. They share token names, not code; any theme that sets the same names works too.
 - **Nested Docs** (`@payloadcms/plugin-nested-docs`): its breadcrumb URL can serve as the path field.
 
 **Family.** Nested Docs Browser is in the Navigation family, with Menu. They're meant to sit side by side in a site's navigation, but nothing in either plugin's code connects them yet. The families are a working draft that may change.
@@ -37,7 +37,7 @@ It needs the MongoDB adapter, and a collection that stores each document's path,
 ## Install
 
 ```bash
-npm install @captiveorigins/payload-plugin-nested-docs-browser
+npm install @extantape/payload-plugin-nested-docs-browser
 ```
 
 Needs Payload 3.80 or later, React 19 and Node 22 or later.
@@ -45,7 +45,7 @@ Needs Payload 3.80 or later, React 19 and Node 22 or later.
 ## Use
 
 ```ts
-import { nestedDocsBrowser } from '@captiveorigins/payload-plugin-nested-docs-browser'
+import { nestedDocsBrowser } from '@extantape/payload-plugin-nested-docs-browser'
 
 nestedDocsBrowser({
   collection: 'taxa',
@@ -61,8 +61,8 @@ nestedDocsBrowser({
 On a page (a server component):
 
 ```tsx
-import { browse } from '@captiveorigins/payload-plugin-nested-docs-browser'
-import { NestedDocsBrowser } from '@captiveorigins/payload-plugin-nested-docs-browser/client'
+import { browse } from '@extantape/payload-plugin-nested-docs-browser'
+import { NestedDocsBrowser } from '@extantape/payload-plugin-nested-docs-browser/client'
 
 const data = await browse(payload, options, 'animalia/chordata/reptilia/squamata')
 return <NestedDocsBrowser data={data} noun="families" Link={Link} />
@@ -88,7 +88,7 @@ Names, everyday names and images come from `describe`, so return only what's fin
 </div>
 ```
 
-The stylesheet renders with the component. To import it instead, use `@captiveorigins/payload-plugin-nested-docs-browser/client/styles.css` and pass `includeStyles={false}`. For a CSP, pass `nonce`.
+The stylesheet renders with the component. To import it instead, use `@extantape/payload-plugin-nested-docs-browser/client/styles.css` and pass `includeStyles={false}`. For a CSP, pass `nonce`.
 
 ## Commands
 

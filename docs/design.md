@@ -11,7 +11,7 @@ A hierarchy with tens of thousands of documents can't be shown the same way at e
 
 ## Three layers
 
-1. **Core** (`@captiveorigins/payload-plugin-nested-docs-browser/core`): plain TypeScript, no Payload, no React.
+1. **Core** (`@extantape/payload-plugin-nested-docs-browser/core`): plain TypeScript, no Payload, no React.
    - `chooseLayout`: gallery, sections, cards, index or leaves, from the number of children shown and whether they are leaves.
    - `presentChildren`: what to show first, what goes behind "Show all", what's flagged and hidden by default (for example fossils), and what has no leaves (empty records).
    - `collapseSingleChild`: skip levels with one child.
