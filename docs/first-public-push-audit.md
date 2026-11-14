@@ -1,6 +1,6 @@
 # First-public-push audit
 
-Run 2026-11-10 by the Web Platform session, before the repo goes public (per ~/Code/CLAUDE.md), so the owner can make it public early. Visibility is changed by the owner, not by this audit.
+Run 2026-11-10 before the repo goes public, so the owner can make it public early. Visibility is changed by the owner, not by this audit.
 
 | Check | Result |
 | --- | --- |
