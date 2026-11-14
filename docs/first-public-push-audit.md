@@ -11,10 +11,10 @@ Run 2026-11-10 by the Web Platform session, before the repo goes public (per ~/C
 | Build output, dependencies, env files committed | None (`dist/`, `node_modules/`, `.env` are ignored) |
 | Private terms (`scripts/leak-check.sh` locally, with ~/.leak-private-terms) | Passed |
 | Leak check in CI | Yes, first step of `.github/workflows/ci.yml` |
-| LICENSE | MIT, Copyright (c) 2026 Captive Origins |
+| LICENSE | MIT, now "Copyright (c) 2026 EXTANT APE" |
 | `package.json` | Not private; license, repository, homepage, bugs and `files` set; typecheck and tests run before publish |
-| Release workflow and RELEASING.md | The same as the other Captive Origins packages |
+| Release workflow and RELEASING.md | The same as the other general Payload plugins |
 | README status line says what has and hasn't been tested | Yes |
-| Details of a real site | None. The tests use a made-up slice of a reptile taxonomy. The docs name the first user (the Captive Origins taxonomy), not its files or setup |
+| Details of a real site | None. The tests use a made-up slice of a reptile taxonomy. The docs mention the first user's taxonomy, not its files or setup |
 
 Result: clean.

@@ -1,6 +1,6 @@
 # Design: Nested Docs Browser
 
-2026-11-10. Owner's decisions (2026-11-10): a package of its own, named after Payload's Nested Docs. First user: the Captive Origins taxonomy.
+2026-11-10. Owner's decisions (2026-11-10): a package of its own, named after Payload's Nested Docs. First user: the first site's taxonomy.
 
 ## The problem
 

@@ -25,7 +25,7 @@ It needs the MongoDB adapter, and a collection that stores each document's path,
 
 ## On its own, and with others
 
-**On its own.** Nested Docs Browser needs the MongoDB adapter and a collection that stores each document's path. Its default look works with no theme at all. It doesn't use any other Captive Origins plugin.
+**On its own.** Nested Docs Browser needs the MongoDB adapter and a collection that stores each document's path. Its default look works with no theme at all. It doesn't use any other plugin.
 
 **Works with:**
 
